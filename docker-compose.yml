@@ -1,16 +1,15 @@
-version: '3'
-
 services:
   keycloak:
-    image: jboss/keycloak
+    image: quay.io/keycloak/keycloak:latest
+    command:
+      - start-dev
+      - --import-realm
     restart: always
     environment:
-      KEYCLOAK_USER: admin
-      KEYCLOAK_PASSWORD: admin
-      KEYCLOAK_IMPORT: /tmp/playground-realm.json
+      KC_BOOTSTRAP_ADMIN_USERNAME: admin
+      KC_BOOTSTRAP_ADMIN_PASSWORD: admin
     volumes:
-      - ./playground-realm.json:/tmp/playground-realm.json
-      - ./login.ftl:/opt/jboss/keycloak/themes/base/login/login.ftl
-      - ./target/recaptcha-login.jar:/opt/jboss/keycloak/standalone/deployments/recaptcha-login.jar
+      - ./playground-realm.json:/opt/keycloak/data/import/playground-realm.json
+      - ./target/recaptcha-login.jar:/opt/keycloak/providers/recaptcha-login.jar
     ports:
       - 8080:8080

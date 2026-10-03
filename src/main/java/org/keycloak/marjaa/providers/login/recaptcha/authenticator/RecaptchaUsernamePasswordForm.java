@@ -20,6 +20,8 @@ import org.keycloak.services.messages.Messages;
 import org.keycloak.services.validation.Validation;
 import org.keycloak.util.JsonSerialization;
 import org.keycloak.marjaa.providers.login.recaptcha.resource.RecaptchaResourceProviderFactory;
+import org.keycloak.authentication.AuthenticationFlowError;
+import org.keycloak.events.Errors;
 
 import jakarta.ws.rs.core.MultivaluedMap;
 import jakarta.ws.rs.core.Response;
@@ -52,11 +54,20 @@ public class RecaptchaUsernamePasswordForm extends UsernamePasswordForm implemen
 		LoginFormsProvider form = context.form();
 
 		if (captchaConfig == null || captchaConfig.getConfig() == null
-				|| captchaConfig.getConfig().get(SITE_KEY) == null
-				|| captchaConfig.getConfig().get(SITE_SECRET) == null) {
-			form.addError(new FormMessage(null, Messages.RECAPTCHA_NOT_CONFIGURED));
-			return;
+		        || captchaConfig.getConfig().get(SITE_KEY) == null
+		        || captchaConfig.getConfig().get(SITE_SECRET) == null) {
+		    form.addError(new FormMessage(null, Messages.RECAPTCHA_NOT_CONFIGURED));
+		    super.authenticate(context);
+		    return;
 		}
+
+//		if (captchaConfig == null || captchaConfig.getConfig() == null
+//				|| captchaConfig.getConfig().get(SITE_KEY) == null
+//				|| captchaConfig.getConfig().get(SITE_SECRET) == null) {
+//			form.addError(new FormMessage(null, Messages.RECAPTCHA_NOT_CONFIGURED));
+//			return;
+//		}
+
 		String siteKey = captchaConfig.getConfig().get(SITE_KEY);
 
 		// Load the widget via our own resource-provider endpoint (self-injecting JS) instead of
@@ -97,13 +108,20 @@ public class RecaptchaUsernamePasswordForm extends UsernamePasswordForm implemen
 		if (success) {
 			super.action(context);
 		} else {
-			errors.add(new FormMessage(null, Messages.RECAPTCHA_FAILED));
-			formData.remove(G_RECAPTCHA_RESPONSE);
-//			 context.error(Errors.INVALID_REGISTRATION);
-			// context.validationError(formData, errors);
-			// context.excludeOtherErrors();
-			return;
+    			formData.remove(G_RECAPTCHA_RESPONSE);
+    			context.getEvent().error(Errors.INVALID_USER_CREDENTIALS);
+   			context.failureChallenge(AuthenticationFlowError.INVALID_CREDENTIALS,
+            			challenge(context, Messages.RECAPTCHA_FAILED));
+    			return;
 		}
+//		} else {
+//			errors.add(new FormMessage(null, Messages.RECAPTCHA_FAILED));
+//			formData.remove(G_RECAPTCHA_RESPONSE);
+//			context.error(Errors.INVALID_REGISTRATION);
+//			context.validationError(formData, errors);
+//			context.excludeOtherErrors();
+//			return;
+//		}
 
 		if (logger.isDebugEnabled()) {
 			logger.debug("action(AuthenticationFlowContext) - end");
